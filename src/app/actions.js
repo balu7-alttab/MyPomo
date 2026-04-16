@@ -36,7 +36,7 @@ export async function saveCategory(catForm) {
   const userId = await getUserId();
   if (catForm.id) {
     await prisma.category.update({ 
-      where: { id: catForm.id, userId }, 
+      where: { userId_id: { id: catForm.id, userId } }, 
       data: { name: catForm.name, color: catForm.color, icon: catForm.icon } 
     });
   } else {
@@ -50,7 +50,7 @@ export async function saveCategory(catForm) {
 
 export async function deleteCategory(id) {
   const userId = await getUserId();
-  await prisma.category.delete({ where: { id, userId } });
+  await prisma.category.delete({ where: { userId_id: { id, userId } } });
   revalidatePath('/');
   revalidatePath('/categories');
 }
@@ -87,7 +87,7 @@ export async function createSession({ categoryId, goalText, durationMinutes }) {
 export async function completeSession(id, { actualDurationSeconds, goalAchieved, note }) {
   const userId = await getUserId();
   const session = await prisma.focusSession.update({
-    where: { id, userId },
+    where: { userId_id: { id, userId } },
     data: {
       status: 'completed',
       actualDurationSeconds,
@@ -108,7 +108,7 @@ export async function completeSession(id, { actualDurationSeconds, goalAchieved,
 export async function abandonSession(id, actualDurationSeconds) {
   const userId = await getUserId();
   const session = await prisma.focusSession.update({
-    where: { id, userId },
+    where: { userId_id: { id, userId } },
     data: {
       status: 'abandoned',
       actualDurationSeconds,

@@ -69,6 +69,8 @@ model Category {
   icon          String
   createdAt     DateTime       @default(now())
   focusSessions FocusSession[]
+
+  @@unique([userId, id])
 }
 
 model FocusSession {
@@ -86,6 +88,7 @@ model FocusSession {
   goal                  Goal?
   notes                 Note[]
   
+  @@unique([userId, id])
   @@map("FocusSession") // explicit name mapping to avoid collision if any
 }
 
