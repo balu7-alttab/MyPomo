@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── AUTH.JS MODELS ────────────────────────────────────────────────────────
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? 
+  access_token       String? 
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? 
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  
+  accounts      Account[]
+  sessions      Session[]
+  
+  categories    Category[]
+  focusSessions FocusSession[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── MYPOMO DOMAIN MODELS ──────────────────────────────────────────────────
+model Category {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  color         String
+  icon          String
+  createdAt     DateTime       @default(now())
+  focusSessions FocusSession[]
+}
+
+model FocusSession {
+  id                    String    @id @default(uuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId            String
+  category              Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  status                String    // "in_progress", "completed", "abandoned"
+  durationMinutes       Int
+  actualDurationSeconds Int       @default(0)
+  startedAt             DateTime  @default(now())
+  endedAt               DateTime?
+  createdAt             DateTime  @default(now())
+  goal                  Goal?
+  notes                 Note[]
+  
+  @@map("FocusSession") // explicit name mapping to avoid collision if any
+}
+
+model Goal {
+  id             String       @id @default(uuid())
+  focusSessionId String       @unique
+  focusSession   FocusSession @relation(fields: [focusSessionId], references: [id], onDelete: Cascade)
+  text           String
+  achieved       Boolean?
+}
+
+model Note {
+  id             String       @id @default(uuid())
+  focusSessionId String
+  focusSession   FocusSession @relation(fields: [focusSessionId], references: [id], onDelete: Cascade)
+  text           String
+  createdAt      DateTime     @default(now())
+}
