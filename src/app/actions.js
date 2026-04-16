@@ -23,20 +23,6 @@ async function getUserId() {
     throw new Error('Unauthorized: Could not resolve strict User ID');
   }
   
-  // Seed default categories for a brand new user
-  const categoriesCount = await prisma.category.count({ where: { userId: finalUserId } });
-  if (categoriesCount === 0) {
-    await prisma.category.createMany({
-      data: [
-        { userId: finalUserId, name: 'Work',            color: '#3b82f6', icon: '🧑‍💼' },
-        { userId: finalUserId, name: 'Personal Growth', color: '#8b5cf6', icon: '🧠' },
-        { userId: finalUserId, name: 'Health & Fitness',color: '#10b981', icon: '💪' },
-        { userId: finalUserId, name: 'Life Admin',      color: '#f59e0b', icon: '🏠' },
-        { userId: finalUserId, name: 'Creative',        color: '#ec4899', icon: '🎨' },
-      ]
-    });
-  }
-  
   return finalUserId;
 }
 
