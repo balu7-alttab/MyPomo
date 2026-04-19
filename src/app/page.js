@@ -64,8 +64,7 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
           <h1 className="page-title">{greeting} 👋</h1>
-          <p className="page-subtitle">What will you focus on today? (Dev Branch 🛠️)</p>
-          {/* Pipeline Verification: Redirect Fix Applied */}
+          <p className="page-subtitle">What will you focus on today?</p>
         </div>
         <Link href="/timer" id="start-session-btn" className="btn btn-primary btn-lg">
           <span>⏱️</span> Start Focus Session
