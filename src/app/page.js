@@ -65,6 +65,7 @@ export default function DashboardPage() {
           </p>
           <h1 className="page-title">{greeting} 👋</h1>
           <p className="page-subtitle">What will you focus on today? (Dev Branch 🛠️)</p>
+          {/* Pipeline Verification: Redirect Fix Applied */}
         </div>
         <Link href="/timer" id="start-session-btn" className="btn btn-primary btn-lg">
           <span>⏱️</span> Start Focus Session
