@@ -1,47 +1,35 @@
-'use client';
-
-import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import { getAnalyticsData } from '@/app/actions';
 
-export default function AnalyticsPage() {
-  const [range, setRange]           = useState('week');
-  const [sessions, setSessions]     = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [breakdown, setBreakdown]   = useState([]);
-  const [stats, setStats]           = useState(null);
-  const [dailyData, setDailyData]   = useState([]);
-  const donutRef = useRef(null);
+export const metadata = {
+  title: 'Analytics | MyPomo',
+};
 
-  async function loadRange(r) {
-    setRange(r);
-    const data = await getAnalyticsData(r);
-    
-    setSessions(data.sessions);
-    setCategories(data.categories);
-    setStats(data.stats); // Actually stats returns total, which is good enough, Though maybe we want slightly different stats. Wait, the server returns full stats object.
+export default async function AnalyticsPage({ searchParams }) {
+  // In Next.js 15+, searchParams is a promise and must be awaited.
+  const resolvedParams = await searchParams;
+  const range = resolvedParams?.range || 'week';
+  
+  const data = await getAnalyticsData(range);
+  
+  const sessions = data.sessions;
+  const categories = data.categories;
+  const stats = data.stats;
 
-    // Compute breakdown manually here since we have sessions
-    const bMap = {};
-    data.sessions.forEach(s => {
-      if (!bMap[s.categoryId]) bMap[s.categoryId] = 0;
-      bMap[s.categoryId] += s.actualDurationSeconds;
-    });
-    
-    const bd = data.categories
-      .map(c => ({ ...c, seconds: bMap[c.id] || 0, minutes: Math.floor((bMap[c.id] || 0) / 60) }))
-      .filter(c => c.seconds > 0)
-      .sort((a, b) => b.seconds - a.seconds);
-      
-    setBreakdown(bd);
-    setDailyData(buildDailyData(data.sessions, r));
-  }
+  // Compute breakdown manually here since we have sessions
+  const bMap = {};
+  sessions.forEach(s => {
+    if (!bMap[s.categoryId]) bMap[s.categoryId] = 0;
+    bMap[s.categoryId] += s.actualDurationSeconds;
+  });
+  
+  const breakdown = categories
+    .map(c => ({ ...c, seconds: bMap[c.id] || 0, minutes: Math.floor((bMap[c.id] || 0) / 60) }))
+    .filter(c => c.seconds > 0)
+    .sort((a, b) => b.seconds - a.seconds);
 
-  useEffect(() => {
-    loadRange('week');
-  }, []);
-
-  function buildDailyData(sess, r) {
+  const buildDailyData = (sess, r) => {
     const now   = new Date();
     const days  = r === 'week' ? 7 : r === 'month' ? 30 : 14;
     const result = [];
@@ -62,7 +50,9 @@ export default function AnalyticsPage() {
       });
     }
     return result;
-  }
+  };
+
+  const dailyData = buildDailyData(sessions, range);
 
   const totalSecs = sessions.reduce((a, s) => a + s.actualDurationSeconds, 0);
   const maxDayMins = Math.max(...dailyData.map(d => d.mins), 1);
@@ -75,9 +65,9 @@ export default function AnalyticsPage() {
     const frac   = totalSecs > 0 ? cat.seconds / totalSecs : 0;
     const dash   = frac * DONUT_C;
     const gap    = DONUT_C - dash;
-    const offset = -cumOffset;
+    const offset = DONUT_C / 4 - cumOffset + dash;
     cumOffset   += dash;
-    return { ...cat, dash, gap, offset: DONUT_C / 4 - cumOffset + dash };
+    return { ...cat, dash, gap, offset };
   });
 
   const formatTime = (mins) => {
@@ -92,17 +82,17 @@ export default function AnalyticsPage() {
           <h1 className="page-title">📊 Analytics</h1>
           <p className="page-subtitle">Visualize where your time and energy goes.</p>
         </div>
-        {/* Range selector */}
+        {/* Range selector - Now uses URL query parameters */}
         <div className="flex gap-2">
           {['week', 'month', 'all'].map(r => (
-            <button
+            <Link
               key={r}
               id={`range-${r}`}
               className={`btn btn-sm ${range === r ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => loadRange(r)}
+              href={`/analytics?range=${r}`}
             >
               {r === 'week' ? 'This Week' : r === 'month' ? 'This Month' : 'All Time'}
-            </button>
+            </Link>
           ))}
         </div>
       </div>

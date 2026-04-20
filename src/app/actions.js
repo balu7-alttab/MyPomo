@@ -46,6 +46,7 @@ export async function saveCategory(catForm) {
   }
   revalidatePath('/');
   revalidatePath('/categories');
+  revalidatePath('/analytics');
 }
 
 export async function deleteCategory(id) {
@@ -53,6 +54,7 @@ export async function deleteCategory(id) {
   await prisma.category.delete({ where: { userId_id: { id, userId } } });
   revalidatePath('/');
   revalidatePath('/categories');
+  revalidatePath('/analytics');
 }
 
 // ─── Sessions ───────────────────────────────────────────────────────────────
@@ -81,6 +83,7 @@ export async function createSession({ categoryId, goalText, durationMinutes }) {
   });
   revalidatePath('/');
   revalidatePath('/sessions');
+  revalidatePath('/analytics');
   return session;
 }
 
@@ -102,6 +105,7 @@ export async function completeSession(id, { actualDurationSeconds, goalAchieved,
   });
   revalidatePath('/');
   revalidatePath('/sessions');
+  revalidatePath('/analytics');
   return session;
 }
 
@@ -117,6 +121,7 @@ export async function abandonSession(id, actualDurationSeconds) {
   });
   revalidatePath('/');
   revalidatePath('/sessions');
+  revalidatePath('/analytics');
   return session;
 }
 
