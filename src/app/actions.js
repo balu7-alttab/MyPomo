@@ -69,6 +69,15 @@ export async function getSessions() {
 
 export async function createSession({ categoryId, goalText, durationMinutes }) {
   const userId = await getUserId();
+
+  // Enforce single-active-session constraint
+  const existingActive = await prisma.focusSession.findFirst({
+    where: { userId, status: 'in_progress' }
+  });
+  if (existingActive) {
+    throw new Error('An active focus session already exists.');
+  }
+
   const session = await prisma.focusSession.create({
     data: {
       userId,

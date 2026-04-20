@@ -29,6 +29,7 @@ export default function TimerPage() {
   const [duration, setDuration]       = useState(25);
   const [customDur, setCustomDur]     = useState('');
   const [useCustom, setUseCustom]     = useState(false);
+  const [isStarting, setIsStarting]   = useState(false);
 
   // Active session
   const [sessionId, setSessionId]   = useState(null);
@@ -109,32 +110,40 @@ export default function TimerPage() {
 
   // ── Actions ────────────────────────────────────────────────────────────────
   async function handleStart() {
+    if (isStarting) return;
     const mins = useCustom ? parseInt(customDur, 10) : duration;
     if (!selectedCat || !goalText.trim() || !mins || mins < 1) return;
 
+    setIsStarting(true);
     const secs      = mins * 60;
     const wallStart = Date.now();
     
-    // DB
-    const session = await createSession({ categoryId: selectedCat, goalText: goalText.trim(), durationMinutes: mins });
+    try {
+      // DB
+      const session = await createSession({ categoryId: selectedCat, goalText: goalText.trim(), durationMinutes: mins });
 
-    setSessionId(session.id);
-    setTotalSecs(secs);
-    setElapsed(0);
-    setPhase('running');
+      setSessionId(session.id);
+      setTotalSecs(secs);
+      setElapsed(0);
+      setPhase('running');
 
-    // Local Storage
-    saveActiveTimer({
-      sessionId:     session.id,
-      categoryId:    selectedCat,
-      goalText:      goalText.trim(),
-      totalSecs:     secs,
-      wallClockStart: wallStart,
-      phase:         'running',
-      elapsedAtPause: 0,
-    });
+      // Local Storage
+      saveActiveTimer({
+        sessionId:     session.id,
+        categoryId:    selectedCat,
+        goalText:      goalText.trim(),
+        totalSecs:     secs,
+        wallClockStart: wallStart,
+        phase:         'running',
+        elapsedAtPause: 0,
+      });
 
-    startTicker(secs, 0, wallStart, 0, session.id, selectedCat, goalText.trim());
+      startTicker(secs, 0, wallStart, 0, session.id, selectedCat, goalText.trim());
+    } catch (err) {
+      alert(err.message || 'Failed to start session');
+    } finally {
+      setIsStarting(false);
+    }
   }
 
   function handlePause() {
@@ -275,9 +284,9 @@ export default function TimerPage() {
             </div>
 
             <button id="start-timer-btn" className="btn btn-primary btn-lg w-full" onClick={handleStart}
-              disabled={!selectedCat || !goalText.trim() || (useCustom ? !customDur : !duration)}
+              disabled={isStarting || !selectedCat || !goalText.trim() || (useCustom ? !customDur : !duration)}
               style={{ marginTop: '0.5rem' }}>
-              ▶ Start Session
+              {isStarting ? 'Starting...' : '▶ Start Session'}
             </button>
           </div>
         </div>
