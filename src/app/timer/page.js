@@ -122,6 +122,10 @@ export default function TimerPage() {
       // DB
       const session = await createSession({ categoryId: selectedCat, goalText: goalText.trim(), durationMinutes: mins });
 
+      if (session?.error) {
+        throw new Error(session.error);
+      }
+
       setSessionId(session.id);
       setTotalSecs(secs);
       setElapsed(0);

@@ -75,7 +75,7 @@ export async function createSession({ categoryId, goalText, durationMinutes }) {
     where: { userId, status: 'in_progress' }
   });
   if (existingActive) {
-    throw new Error('An active focus session already exists.');
+    return { error: 'An active focus session already exists. Please complete or abandon it first.' };
   }
 
   const session = await prisma.focusSession.create({
