@@ -16,9 +16,9 @@ function SignInContent() {
     }}>
       <div className="card" style={{ maxWidth: 400, width: '100%', textAlign: 'center', padding: '3rem 2rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🍅</div>
-        <h1 style={{ marginBottom: '0.5rem', fontWeight: 800 }}>MyPomo</h1>
-        <p className="text-muted" style={{ marginBottom: '2.5rem' }}>
-          Sign in to access your personal focus tracking and synced categories.
+        <h1 style={{ marginBottom: '0.25rem', fontWeight: 800 }}>MyPomo</h1>
+        <p className="text-muted" style={{ marginBottom: '2.5rem', fontWeight: 500, letterSpacing: '0.02em' }}>
+          Your personal focus Journal
         </p>
 
         {error && (

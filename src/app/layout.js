@@ -2,8 +2,8 @@ import './globals.css';
 import Providers from '@/components/Providers';
 
 export const metadata = {
-  title: 'MyPomo — Focus & Habit Tracker',
-  description: 'Categorized Pomodoro timer with habit tracking and focus analytics. Own your time.',
+  title: 'MyPomo — Your personal focus Journal',
+  description: 'Your personal focus Journal. Track sessions, manage categories, and hit your goals.',
   viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
   themeColor: '#09090f',
   appleWebApp: {

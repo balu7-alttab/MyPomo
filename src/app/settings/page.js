@@ -6,54 +6,104 @@ import { signOut } from 'next-auth/react';
 export default function SettingsPage() {
   return (
     <AppShell>
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: '3rem' }}>
         <div>
           <h1 className="page-title">⚙️ Settings</h1>
-          <p className="page-subtitle">Manage your account and preferences.</p>
+          <p className="page-subtitle">Manage your account, preferences, and workspace configuration.</p>
         </div>
       </div>
 
-      {/* ── Account Information ────────────────────────────────────────────── */}
-      <h3 style={{ marginBottom: '1.25rem' }}>Account</h3>
-      <div className="card" style={{ maxWidth: 560, marginBottom: '2rem' }}>
-        <p className="text-sm text-muted" style={{ marginBottom: '1.5rem' }}>
-          You are currently signed in via Google Auth.
-        </p>
-        <button id="sign-out-btn" className="btn btn-secondary" onClick={() => signOut({ callbackUrl: '/auth/signin' })}>
-          Sign Out
-        </button>
-      </div>
-
-      {/* ── About Tab ─────────────────────────────────────────────────── */}
-      <h3 style={{ marginBottom: '1.25rem' }}>About MyPomo</h3>
-      <div className="card" style={{ maxWidth: 560 }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🍅</div>
-          <h2>MyPomo</h2>
-          <p className="text-muted" style={{ marginTop: '0.5rem' }}>Version 0.3 — Phase 4 Build (Auth & Cloud Sync)</p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {[
-            { label: 'Stack', value: 'Next.js 14 · Vanilla CSS' },
-            { label: 'Database', value: 'SQLite via Prisma ORM' },
-            { label: 'Auth', value: 'Google Single Sign-On (Auth.js)' },
-            { label: 'Storage', value: 'Cloud Synced Database' },
-          ].map(item => (
-            <div key={item.label}
-              style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '0.75rem 0', borderBottom: '1px solid var(--border)',
-              }}>
-              <span className="text-muted text-sm">{item.label}</span>
-              <span className="text-sm" style={{ fontWeight: 600 }}>{item.value}</span>
+      <div style={{ maxWidth: '1000px' }}>
+        
+        {/* ── Account & Data ─────────────────────────────────────────────── */}
+        <div className="settings-section">
+          <div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600 }}>Account & Data</h3>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              Manage your linked identity and data exports.
+            </p>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {/* User ID */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontWeight: 500, fontSize: '0.9375rem' }}>User Context</span>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Authenticated via Google SSO</span>
+              </div>
+              <span className="mono" style={{ fontSize: '0.8125rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                Active
+              </span>
             </div>
-          ))}
+            {/* Export Data */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontWeight: 500, fontSize: '0.9375rem' }}>Export Data</span>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Download a CSV of all your focus sessions</span>
+              </div>
+              <button className="btn btn-secondary btn-sm" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                Export (Coming soon)
+              </button>
+            </div>
+            {/* Sign Out */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', background: 'rgba(255, 69, 58, 0.05)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontWeight: 500, fontSize: '0.9375rem', color: 'var(--danger)' }}>Sign Out</span>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Securely disconnect your session</span>
+              </div>
+              <button 
+                id="sign-out-btn" 
+                className="btn btn-sm" 
+                style={{ background: 'rgba(255, 69, 58, 0.1)', color: 'var(--danger)', border: '1px solid rgba(255, 69, 58, 0.3)' }}
+                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)' }}>
-          <p className="text-xs text-muted text-center">
-            ✅ Authenticated. All focus data is safely stored in the database.
-          </p>
+
+        {/* ── App Preferences ────────────────────────────────────────────── */}
+        <div className="settings-section">
+          <div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600 }}>App Preferences</h3>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              Customize how MyPomo looks across your devices.
+            </p>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontWeight: 500, fontSize: '0.9375rem' }}>Appearance Theme</span>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Switch between light and dark modes</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Coming Soon</span>
+                <div style={{ width: '44px', height: '24px', background: 'rgba(255,255,255,0.1)', borderRadius: '12px', position: 'relative', opacity: 0.5, cursor: 'not-allowed' }}>
+                  <div style={{ position: 'absolute', left: '2px', top: '2px', width: '20px', height: '20px', background: 'var(--text-muted)', borderRadius: '50%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* ── About MyPomo ─────────────────────────────────────────────── */}
+        <div className="settings-section">
+          <div>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: 600 }}>About MyPomo</h3>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              System information and developer credits.
+            </p>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontWeight: 500, fontSize: '0.9375rem' }}>Developed by Balu Akula, Founder of Alt-tab</span>
+            </div>
+            <div style={{ padding: '1.25rem 1.5rem' }}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Version 1.0</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </AppShell>
   );
