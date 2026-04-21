@@ -29,16 +29,18 @@ export default function DashboardPage() {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       
-      const todays = weeklyData.sessions.filter(s => new Date(s.endedAt) >= todayStart);
+      const todays = (weeklyData.sessions || [])
+        .filter(s => s.endedAt && new Date(s.endedAt) >= todayStart);
       setTodaySessions(todays.slice(0, 5));
 
       // Build week breakdown by category
       const breakdownMap = {};
-      weeklyData.sessions.forEach(s => {
+      (weeklyData.sessions || []).forEach(s => {
+        if (!s.categoryId) return;
         if (!breakdownMap[s.categoryId]) breakdownMap[s.categoryId] = 0;
-        breakdownMap[s.categoryId] += s.actualDurationSeconds;
+        breakdownMap[s.categoryId] += (s.actualDurationSeconds || 0);
       });
-      const breakdown = weeklyData.categories
+      const breakdown = (weeklyData.categories || [])
         .map(c => ({ ...c, minutes: Math.floor((breakdownMap[c.id] || 0) / 60) }))
         .filter(c => c.minutes > 0)
         .sort((a, b) => b.minutes - a.minutes);
@@ -64,7 +66,7 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
           <h1 className="page-title">{greeting} 👋</h1>
-          <p className="page-subtitle">What will you focus on today? (Dev Branch 🛠️)</p>
+          <p className="page-subtitle">What will you focus on today?</p>
         </div>
         <Link href="/timer" id="start-session-btn" className="btn btn-primary btn-lg">
           <span>⏱️</span> Start Focus Session

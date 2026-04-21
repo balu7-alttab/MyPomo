@@ -63,7 +63,23 @@ export async function getSessions() {
   const userId = await getUserId();
   return prisma.focusSession.findMany({ 
     where: { userId }, 
-    include: { goal: true, notes: true, category: true },
+    select: {
+      id: true,
+      categoryId: true,
+      status: true,
+      actualDurationSeconds: true,
+      startedAt: true,
+      endedAt: true,
+      goal: { 
+        select: { text: true, achieved: true } 
+      },
+      notes: {
+        select: { id: true, text: true }
+      },
+      category: {
+        select: { id: true, name: true, color: true, icon: true }
+      }
+    },
     orderBy: { startedAt: 'desc' } 
   });
 }
