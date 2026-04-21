@@ -114,24 +114,36 @@ export default function TimerPage() {
     const mins = useCustom ? parseInt(customDur, 10) : duration;
     if (!selectedCat || !goalText.trim() || !mins || mins < 1) return;
 
-    setIsStarting(true);
     const secs      = mins * 60;
     const wallStart = Date.now();
     
+    // 🚀 OPTIMISTIC UI: Start the clock immediately before the server responds
+    setTotalSecs(secs);
+    setElapsed(0);
+    setPhase('running');
+    startTicker(secs, 0, wallStart, 0, 'optimistic-temp-id', selectedCat, goalText.trim());
+    
+    // Persist optimistic state locally
+    saveActiveTimer({
+      sessionId:     'optimistic-temp-id',
+      categoryId:    selectedCat,
+      goalText:      goalText.trim(),
+      totalSecs:     secs,
+      wallClockStart: wallStart,
+      phase:         'running',
+      elapsedAtPause: 0,
+    });
+
+    setIsStarting(true);
     try {
-      // DB
       const session = await createSession({ categoryId: selectedCat, goalText: goalText.trim(), durationMinutes: mins });
 
       if (session?.error) {
         throw new Error(session.error);
       }
 
+      // Reconciliation: Update with real server ID
       setSessionId(session.id);
-      setTotalSecs(secs);
-      setElapsed(0);
-      setPhase('running');
-
-      // Local Storage
       saveActiveTimer({
         sessionId:     session.id,
         categoryId:    selectedCat,
@@ -142,9 +154,11 @@ export default function TimerPage() {
         elapsedAtPause: 0,
       });
 
-      startTicker(secs, 0, wallStart, 0, session.id, selectedCat, goalText.trim());
     } catch (err) {
-      alert(err.message || 'Failed to start session');
+      // 🛑 ROLLBACK: Stop the timer if server rejects
+      resetAll();
+      clearActiveTimer();
+      alert(err.message || 'Failed to start session on server');
     } finally {
       setIsStarting(false);
     }

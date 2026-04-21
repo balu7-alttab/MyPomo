@@ -2,10 +2,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { cache } from 'react';
 import { auth } from '@/lib/auth';
 
 // ─── User (Auth.js) ───────────────────────────────────────────────────────
-async function getUserId() {
+const getUserId = cache(async () => {
   const session = await auth();
   if (!session || !session.user) {
     throw new Error('Unauthorized');
@@ -24,7 +25,7 @@ async function getUserId() {
   }
   
   return finalUserId;
-}
+});
 
 // ─── Categories ─────────────────────────────────────────────────────────────
 export async function getCategories() {
@@ -162,17 +163,21 @@ export async function getAnalyticsData(range = 'week') {
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
   
-  const sessions = await prisma.focusSession.findMany({
-    where: { 
-      userId, 
-      status: 'completed',
-      endedAt: { gte: startDate, lte: now }
-    },
-    include: { goal: true, category: true },
-    orderBy: { endedAt: 'desc' }
-  });
+  // PARALLEL DATA PIPELINE: Fetch everything in one network round-trip
+  const [allSessions, categories] = await Promise.all([
+    prisma.focusSession.findMany({ 
+      where: { userId, status: 'completed' },
+      include: { goal: true, category: true },
+      orderBy: { endedAt: 'desc' }
+    }),
+    prisma.category.findMany({ 
+      where: { userId } 
+    })
+  ]);
   
-  const allSessions = await prisma.focusSession.findMany({ where: { userId, status: 'completed' }});
+  // IN-MEMORY FILTERING: V8 is orders of magnitude faster than a DB round-trip
+  const sessions = allSessions.filter(s => new Date(s.endedAt) >= startDate && new Date(s.endedAt) <= now);
+  
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todaySessions = allSessions.filter(s => new Date(s.endedAt) >= todayStart);
   
@@ -189,7 +194,5 @@ export async function getAnalyticsData(range = 'week') {
     todaySessions: todaySessions.length,
   };
 
-  const categories = await prisma.category.findMany({ where: { userId } });
-  
   return { sessions, stats, categories };
 }
