@@ -163,35 +163,56 @@ export async function getAnalyticsData(range = 'week') {
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
   
-  // PARALLEL DATA PIPELINE: Fetch everything in one network round-trip
-  const [allSessions, categories] = await Promise.all([
-    prisma.focusSession.findMany({ 
-      where: { userId, status: 'completed' },
-      include: { goal: true, category: true },
-      orderBy: { endedAt: 'desc' }
-    }),
-    prisma.category.findMany({ 
-      where: { userId } 
-    })
-  ]);
-  
-  // IN-MEMORY FILTERING: V8 is orders of magnitude faster than a DB round-trip
-  const sessions = allSessions.filter(s => new Date(s.endedAt) >= startDate && new Date(s.endedAt) <= now);
-  
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todaySessions = allSessions.filter(s => new Date(s.endedAt) >= todayStart);
-  
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0, 0, 0, 0);
-  const weekSessions = allSessions.filter(s => new Date(s.endedAt) >= weekStart);
 
+  // DEEP PRUNING AND NATIVE AGGREGATIONS
+  // We use parallel queries to let the DB do the math instantly, returning only bytes instead of megabytes.
+  const [
+    sessions,
+    categories,
+    totalAgg,
+    todayAgg,
+    weekAgg
+  ] = await Promise.all([
+    prisma.focusSession.findMany({ 
+      where: { userId, status: 'completed', endedAt: { gte: startDate, lte: now } },
+      select: {
+        categoryId: true,
+        actualDurationSeconds: true,
+        endedAt: true,
+        goal: { select: { achieved: true } }
+      },
+      orderBy: { endedAt: 'desc' }
+    }),
+    prisma.category.findMany({ 
+      where: { userId },
+      select: { id: true, name: true, color: true, icon: true }
+    }),
+    prisma.focusSession.aggregate({
+      _sum: { actualDurationSeconds: true },
+      _count: { id: true },
+      where: { userId, status: 'completed' }
+    }),
+    prisma.focusSession.aggregate({
+      _sum: { actualDurationSeconds: true },
+      _count: { id: true },
+      where: { userId, status: 'completed', endedAt: { gte: todayStart } }
+    }),
+    prisma.focusSession.aggregate({
+      _sum: { actualDurationSeconds: true },
+      where: { userId, status: 'completed', endedAt: { gte: weekStart } }
+    })
+  ]);
+  
   const stats = {
-    totalHours: (allSessions.reduce((a, s) => a + s.actualDurationSeconds, 0) / 3600).toFixed(1),
-    todayMinutes: Math.floor(todaySessions.reduce((a, s) => a + s.actualDurationSeconds, 0) / 60),
-    weekHours: (weekSessions.reduce((a, s) => a + s.actualDurationSeconds, 0) / 3600).toFixed(1),
-    totalSessions: allSessions.length,
-    todaySessions: todaySessions.length,
+    totalHours: ((totalAgg._sum.actualDurationSeconds || 0) / 3600).toFixed(1),
+    todayMinutes: Math.floor((todayAgg._sum.actualDurationSeconds || 0) / 60),
+    weekHours: ((weekAgg._sum.actualDurationSeconds || 0) / 3600).toFixed(1),
+    totalSessions: totalAgg._count.id || 0,
+    todaySessions: todayAgg._count.id || 0,
   };
 
   return { sessions, stats, categories };
