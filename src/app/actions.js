@@ -68,7 +68,7 @@ export async function getSessions() {
   });
 }
 
-export async function createSession({ categoryId, goalText, durationMinutes }) {
+export async function createSession({ id, categoryId, goalText, durationMinutes }) {
   const userId = await getUserId();
 
   // Enforce single-active-session constraint
@@ -81,6 +81,7 @@ export async function createSession({ categoryId, goalText, durationMinutes }) {
 
   const session = await prisma.focusSession.create({
     data: {
+      id, // Client-provided exact UUID for perfect Optimistic UI tracking!
       userId,
       categoryId,
       durationMinutes,

@@ -29,6 +29,7 @@ export default function Sidebar() {
           {NAV.slice(0, 2).map(item => (
             <Link
               key={item.href}
+              prefetch={true}
               href={item.href}
               id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
               className={`nav-link ${pathname === item.href ? 'active' : ''}`}
@@ -42,6 +43,7 @@ export default function Sidebar() {
           {NAV.slice(2, 5).map(item => (
             <Link
               key={item.href}
+              prefetch={true}
               href={item.href}
               id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
               className={`nav-link ${pathname === item.href ? 'active' : ''}`}
@@ -55,6 +57,7 @@ export default function Sidebar() {
           {NAV.slice(5).map(item => (
             <Link
               key={item.href}
+              prefetch={true}
               href={item.href}
               id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
               className={`nav-link ${pathname === item.href ? 'active' : ''}`}
@@ -80,6 +83,7 @@ export default function Sidebar() {
         {[NAV[0], NAV[1], NAV[2], NAV[3], NAV[5]].map(item => (
           <Link
             key={item.href}
+            prefetch={true}
             href={item.href}
             id={`tab-${item.label.toLowerCase().replace(/\s/g, '-')}`}
             className={`tab-item ${pathname === item.href ? 'active' : ''}`}

@@ -117,15 +117,18 @@ export default function TimerPage() {
     const secs      = mins * 60;
     const wallStart = Date.now();
     
-    // 🚀 OPTIMISTIC UI: Start the clock immediately before the server responds
+    // 💎 DETERMINISTIC OPTIMISTIC UI: Give the session a permanent UUID instantly
+    const permanentSessionId = crypto.randomUUID();
+    
+    setSessionId(permanentSessionId);
     setTotalSecs(secs);
     setElapsed(0);
     setPhase('running');
-    startTicker(secs, 0, wallStart, 0, 'optimistic-temp-id', selectedCat, goalText.trim());
+    startTicker(secs, 0, wallStart, 0, permanentSessionId, selectedCat, goalText.trim());
     
-    // Persist optimistic state locally
+    // Persist optimistic state locally using the real ID
     saveActiveTimer({
-      sessionId:     'optimistic-temp-id',
+      sessionId:     permanentSessionId,
       categoryId:    selectedCat,
       goalText:      goalText.trim(),
       totalSecs:     secs,
@@ -136,23 +139,16 @@ export default function TimerPage() {
 
     setIsStarting(true);
     try {
-      const session = await createSession({ categoryId: selectedCat, goalText: goalText.trim(), durationMinutes: mins });
+      const session = await createSession({ 
+        id: permanentSessionId, // Send the exact ID to the server
+        categoryId: selectedCat, 
+        goalText: goalText.trim(), 
+        durationMinutes: mins 
+      });
 
       if (session?.error) {
         throw new Error(session.error);
       }
-
-      // Reconciliation: Update with real server ID
-      setSessionId(session.id);
-      saveActiveTimer({
-        sessionId:     session.id,
-        categoryId:    selectedCat,
-        goalText:      goalText.trim(),
-        totalSecs:     secs,
-        wallClockStart: wallStart,
-        phase:         'running',
-        elapsedAtPause: 0,
-      });
 
     } catch (err) {
       // 🛑 ROLLBACK: Stop the timer if server rejects
@@ -196,9 +192,7 @@ export default function TimerPage() {
 
   async function handleAbandon() {
     try {
-      if (!sessionId || sessionId === 'optimistic-temp-id') {
-        throw new Error("Still syncing with server. Please wait a moment.");
-      }
+      if (!sessionId) return;
       clearInterval(intervalRef.current);
       await abandonSession(sessionId, elapsed);
       clearActiveTimer();
@@ -210,9 +204,7 @@ export default function TimerPage() {
 
   async function handleSaveReflection() {
     try {
-      if (!sessionId || sessionId === 'optimistic-temp-id') {
-        throw new Error("Still syncing with server. Please wait a moment.");
-      }
+      if (!sessionId) return;
       await completeSession(sessionId, {
         actualDurationSeconds: elapsed,
         goalAchieved,
