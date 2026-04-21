@@ -37,9 +37,9 @@ export default async function AnalyticsPage({ searchParams }) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
       const key  = d.toDateString();
-      const mins = sess
-        .filter(s => new Date(s.endedAt).toDateString() === key)
-        .reduce((a, s) => a + Math.floor(s.actualDurationSeconds / 60), 0);
+      const mins = (sess || [])
+        .filter(s => s.endedAt && new Date(s.endedAt).toDateString() === key)
+        .reduce((a, s) => a + Math.floor((s.actualDurationSeconds || 0) / 60), 0);
       result.push({
         date: d,
         label: d.toLocaleDateString('en-US', { weekday: r === 'week' ? 'short' : undefined, month: 'short', day: 'numeric' }),

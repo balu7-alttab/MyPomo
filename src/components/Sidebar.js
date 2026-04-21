@@ -26,9 +26,11 @@ const FOCUS_INSIGHTS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const [insightIndex, setInsightIndex] = useState(0);
 
   useEffect(() => {
+    setMounted(true);
     // Pick a random initial index on mount
     setInsightIndex(Math.floor(Math.random() * FOCUS_INSIGHTS.length));
 
@@ -95,29 +97,31 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        <div style={{ padding: '1.25rem 0.75rem', borderTop: '1px solid var(--border)' }}>
-          <div key={insightIndex} className="fade-in" style={{ fontSize: '0.75rem', lineHeight: 1.6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
-              <span style={{ fontSize: '1rem' }}>{currentInsight.icon}</span>
-              <span style={{ fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.625rem' }}>
-                {currentInsight.type === 'stat' ? 'Focus Stat' : 'Focus Quote'}
-              </span>
-            </div>
-            
-            {currentInsight.title && (
-              <div style={{ fontWeight: 600, color: 'var(--accent-secondary)', marginBottom: '0.125rem', fontSize: '0.8125rem' }}>
-                {currentInsight.title}
+        <div style={{ padding: '1.25rem 0.75rem', borderTop: '1px solid var(--border)', minHeight: '100px' }}>
+          {mounted && (
+            <div key={insightIndex} className="fade-in" style={{ fontSize: '0.75rem', lineHeight: 1.6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+                <span style={{ fontSize: '1rem' }}>{currentInsight.icon}</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.625rem' }}>
+                  {currentInsight.type === 'stat' ? 'Focus Stat' : 'Focus Quote'}
+                </span>
               </div>
-            )}
-            
-            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.75rem', fontStyle: currentInsight.type === 'quote' ? 'italic' : 'normal' }}>
-              "{currentInsight.text}"
-            </p>
-            
-            <div style={{ marginTop: '0.5rem', fontSize: '0.625rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              — {currentInsight.source}
+              
+              {currentInsight.title && (
+                <div style={{ fontWeight: 600, color: 'var(--accent-secondary)', marginBottom: '0.125rem', fontSize: '0.8125rem' }}>
+                  {currentInsight.title}
+                </div>
+              )}
+              
+              <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.75rem', fontStyle: currentInsight.type === 'quote' ? 'italic' : 'normal' }}>
+                "{currentInsight.text}"
+              </p>
+              
+              <div style={{ marginTop: '0.5rem', fontSize: '0.625rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                — {currentInsight.source}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </aside>
 
