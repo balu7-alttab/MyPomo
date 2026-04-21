@@ -205,11 +205,14 @@ export default function TimerPage() {
   async function handleSaveReflection() {
     try {
       if (!sessionId) return;
-      await completeSession(sessionId, {
+      const result = await completeSession(sessionId, {
         actualDurationSeconds: elapsed,
         goalAchieved,
         note: note.trim(),
       });
+      if (result?.error) {
+        throw new Error(result.error);
+      }
       clearActiveTimer();
       resetAll();
       router.push('/');

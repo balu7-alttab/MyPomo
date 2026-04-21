@@ -99,25 +99,30 @@ export async function createSession({ id, categoryId, goalText, durationMinutes 
 }
 
 export async function completeSession(id, { actualDurationSeconds, goalAchieved, note }) {
-  const userId = await getUserId();
-  const session = await prisma.focusSession.update({
-    where: { userId_id: { id, userId } },
-    data: {
-      status: 'completed',
-      actualDurationSeconds,
-      endedAt: new Date(),
-      goal: {
-        update: { achieved: goalAchieved }
-      },
-      notes: note ? {
-        create: { text: note }
-      } : undefined
-    }
-  });
-  revalidatePath('/');
-  revalidatePath('/sessions');
-  revalidatePath('/analytics');
-  return session;
+  try {
+    const userId = await getUserId();
+    const session = await prisma.focusSession.update({
+      where: { userId_id: { id, userId } },
+      data: {
+        status: 'completed',
+        actualDurationSeconds,
+        endedAt: new Date(),
+        goal: {
+          update: { achieved: goalAchieved }
+        },
+        notes: note ? {
+          create: { text: note }
+        } : undefined
+      }
+    });
+    revalidatePath('/');
+    revalidatePath('/sessions');
+    revalidatePath('/analytics');
+    return session;
+  } catch (error) {
+    console.error("completeSession error:", error);
+    return { error: error.message || "Database update failed" };
+  }
 }
 
 export async function abandonSession(id, actualDurationSeconds) {
@@ -181,10 +186,16 @@ export async function getAnalyticsData(range = 'week') {
     prisma.focusSession.findMany({ 
       where: { userId, status: 'completed', endedAt: { gte: startDate, lte: now } },
       select: {
+        id: true,
         categoryId: true,
         actualDurationSeconds: true,
         endedAt: true,
-        goal: { select: { achieved: true } }
+        category: {
+          select: { id: true, name: true, color: true, icon: true }
+        },
+        goal: { 
+          select: { text: true, achieved: true } 
+        }
       },
       orderBy: { endedAt: 'desc' }
     }),
