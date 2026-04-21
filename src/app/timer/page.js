@@ -195,21 +195,35 @@ export default function TimerPage() {
   }
 
   async function handleAbandon() {
-    clearInterval(intervalRef.current);
-    await abandonSession(sessionId, elapsed);
-    clearActiveTimer();
-    resetAll();
+    try {
+      if (!sessionId || sessionId === 'optimistic-temp-id') {
+        throw new Error("Still syncing with server. Please wait a moment.");
+      }
+      clearInterval(intervalRef.current);
+      await abandonSession(sessionId, elapsed);
+      clearActiveTimer();
+      resetAll();
+    } catch (err) {
+      alert(err.message || 'Failed to abandon session.');
+    }
   }
 
   async function handleSaveReflection() {
-    await completeSession(sessionId, {
-      actualDurationSeconds: elapsed,
-      goalAchieved,
-      note: note.trim(),
-    });
-    clearActiveTimer();
-    resetAll();
-    router.push('/');
+    try {
+      if (!sessionId || sessionId === 'optimistic-temp-id') {
+        throw new Error("Still syncing with server. Please wait a moment.");
+      }
+      await completeSession(sessionId, {
+        actualDurationSeconds: elapsed,
+        goalAchieved,
+        note: note.trim(),
+      });
+      clearActiveTimer();
+      resetAll();
+      router.push('/');
+    } catch (err) {
+      alert("Failed to save session: " + (err.message || "Unknown error"));
+    }
   }
 
   function resetAll() {
