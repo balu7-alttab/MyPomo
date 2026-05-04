@@ -190,50 +190,46 @@ export async function getAnalyticsData(range = 'week') {
   weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0, 0, 0, 0);
 
-  // DEEP PRUNING AND NATIVE AGGREGATIONS
-  // We use parallel queries to let the DB do the math instantly, returning only bytes instead of megabytes.
-  const [
-    sessions,
-    categories,
-    totalAgg,
-    todayAgg,
-    weekAgg
-  ] = await Promise.all([
-    prisma.focusSession.findMany({ 
-      where: { userId, status: 'completed', endedAt: { gte: startDate, lte: now } },
-      select: {
-        id: true,
-        categoryId: true,
-        actualDurationSeconds: true,
-        endedAt: true,
-        category: {
-          select: { id: true, name: true, color: true, icon: true }
-        },
-        goal: { 
-          select: { text: true, achieved: true } 
-        }
+  // SEQUENTIAL QUERIES: Prevent Vercel Serverless Connection Exhaustion
+  // We execute these one by one to ensure we only use 1 connection from the Supabase pool.
+  const sessions = await prisma.focusSession.findMany({ 
+    where: { userId, status: 'completed', endedAt: { gte: startDate, lte: now } },
+    select: {
+      id: true,
+      categoryId: true,
+      actualDurationSeconds: true,
+      endedAt: true,
+      category: {
+        select: { id: true, name: true, color: true, icon: true }
       },
-      orderBy: { endedAt: 'desc' }
-    }),
-    prisma.category.findMany({ 
-      where: { userId },
-      select: { id: true, name: true, color: true, icon: true }
-    }),
-    prisma.focusSession.aggregate({
-      _sum: { actualDurationSeconds: true },
-      _count: { id: true },
-      where: { userId, status: 'completed' }
-    }),
-    prisma.focusSession.aggregate({
-      _sum: { actualDurationSeconds: true },
-      _count: { id: true },
-      where: { userId, status: 'completed', endedAt: { gte: todayStart } }
-    }),
-    prisma.focusSession.aggregate({
-      _sum: { actualDurationSeconds: true },
-      where: { userId, status: 'completed', endedAt: { gte: weekStart } }
-    })
-  ]);
+      goal: { 
+        select: { text: true, achieved: true } 
+      }
+    },
+    orderBy: { endedAt: 'desc' }
+  });
+
+  const categories = await prisma.category.findMany({ 
+    where: { userId },
+    select: { id: true, name: true, color: true, icon: true }
+  });
+
+  const totalAgg = await prisma.focusSession.aggregate({
+    _sum: { actualDurationSeconds: true },
+    _count: { id: true },
+    where: { userId, status: 'completed' }
+  });
+
+  const todayAgg = await prisma.focusSession.aggregate({
+    _sum: { actualDurationSeconds: true },
+    _count: { id: true },
+    where: { userId, status: 'completed', endedAt: { gte: todayStart } }
+  });
+
+  const weekAgg = await prisma.focusSession.aggregate({
+    _sum: { actualDurationSeconds: true },
+    where: { userId, status: 'completed', endedAt: { gte: weekStart } }
+  });
   
   const stats = {
     totalHours: ((totalAgg._sum.actualDurationSeconds || 0) / 3600).toFixed(1),
