@@ -121,7 +121,7 @@ export default async function AnalyticsPage({ searchParams }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+      <div className="grid-2" style={{ marginBottom: '1.5rem' }}>
 
         {/* Donut chart */}
         <div className="card" style={{ textAlign: 'center' }}>
@@ -134,7 +134,7 @@ export default async function AnalyticsPage({ searchParams }) {
           ) : (
             <>
               <div style={{ position: 'relative', display: 'inline-block' }}>
-                <svg width="180" height="180" viewBox="0 0 180 180">
+                <svg viewBox="0 0 180 180" style={{ width: '100%', maxWidth: '180px' }}>
                   {donutSlices.map((cat, i) => (
                     <circle
                       key={cat.id}

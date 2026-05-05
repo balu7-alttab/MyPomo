@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '@/components/AppShell';
+import FocusInsightWidget from '@/components/FocusInsightWidget';
 import { getAnalyticsData } from '@/app/actions';
 
 export default function DashboardPage() {
@@ -59,6 +60,10 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
+      <div className="mobile-only" style={{ marginBottom: '1.5rem', background: 'var(--bg-card)', padding: '1.25rem 1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+        <FocusInsightWidget />
+      </div>
+
       {/* Header */}
       <div className="page-header">
         <div>

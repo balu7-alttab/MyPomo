@@ -568,14 +568,38 @@ select.input {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
+.mobile-only {
+  display: none;
+}
+
+.mobile-header {
+  display: none;
+}
+
 /* ─── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   :root { --sidebar-width: 0px; }
 
+  .mobile-only {
+    display: block;
+  }
+
+  .mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 90;
+  }
+
   .main-content {
     margin-left: 0;
     padding: 1rem;
-    padding-bottom: 5rem; /* mobile tab bar */
+    padding-bottom: 6rem; /* extra padding for mobile tab bar */
   }
 
   .sidebar {
@@ -594,6 +618,12 @@ select.input {
 
   .mobile-tab-bar {
     display: flex !important;
+  }
+
+  .modal {
+    padding: 1.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
   }
 }
 

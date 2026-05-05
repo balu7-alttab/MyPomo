@@ -345,7 +345,7 @@ export default function TimerPage() {
                 animation: 'pulse-ring 2s ease-out infinite',
               }} />
             )}
-            <svg width="280" height="280" style={{ transform: 'rotate(-90deg)' }}>
+            <svg viewBox="0 0 280 280" style={{ width: '100%', maxWidth: '280px', transform: 'rotate(-90deg)' }}>
               <circle cx="140" cy="140" r={RADIUS} fill="none" stroke="var(--bg-elevated)" strokeWidth="10" />
               <circle cx="140" cy="140" r={RADIUS} fill="none"
                 stroke={activeCat?.color || 'var(--accent-primary)'}
