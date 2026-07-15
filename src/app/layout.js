@@ -4,13 +4,18 @@ import Providers from '@/components/Providers';
 export const metadata = {
   title: 'MyPomo — Your personal focus Journal',
   description: 'Your personal focus Journal. Track sessions, manage categories, and hit your goals.',
-  viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
-  themeColor: '#09090f',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'MyPomo',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#09090f',
 };
 
 export default function RootLayout({ children }) {
