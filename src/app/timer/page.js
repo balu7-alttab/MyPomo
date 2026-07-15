@@ -8,14 +8,10 @@ import {
   createSession,
   completeSession,
   abandonSession,
+  getActiveSession,
+  pauseSession,
+  resumeSession
 } from '@/app/actions';
-import {
-  saveActiveTimer,
-  loadActiveTimer,
-  clearActiveTimer,
-} from '@/lib/data';
-
-/* ─── Timer States: idle → running → paused → done ─────────────────────── */
 
 export default function TimerPage() {
   const router = useRouter();
@@ -36,55 +32,58 @@ export default function TimerPage() {
   const [totalSecs, setTotalSecs]   = useState(0);
   const [elapsed, setElapsed]       = useState(0);
   const intervalRef  = useRef(null);
-  const wallStartRef = useRef(null); // Date.now() when timer last started/resumed
-  const baseElapsed  = useRef(0);   // seconds already elapsed before last (re)start
+  const wallStartRef = useRef(null);
+  const baseElapsed  = useRef(0);
 
-  // Done / reflection
+  // Reflection
   const [goalAchieved, setGoalAchieved] = useState(null);
   const [note, setNote]                 = useState('');
 
-  // ── On mount: restore any running session from localStorage ───────────────
+  // ── 100% Server-Driven Initialization ─────────────────────────────────────
   useEffect(() => {
     async function init() {
       const cats = await getCategories();
       setCategories(cats);
 
-      const saved = loadActiveTimer();
-      if (!saved) return;
+      const active = await getActiveSession();
+      if (!active) return;
 
-      const { sessionId, categoryId, goalText, totalSecs, wallClockStart, phase, elapsedAtPause } = saved;
-
-      if (phase === 'running') {
-        const elapsed = Math.floor((Date.now() - wallClockStart) / 1000);
-        if (elapsed >= totalSecs) {
-          // Session already expired while away — go straight to done
-          restoreSession({ sessionId, categoryId, goalText, totalSecs, elapsed: totalSecs, phase: 'done' });
-          setPhase('done');
-          return;
+      const total = active.durationMinutes * 60;
+      
+      if (active.status === 'paused') {
+        // Paused on server
+        restoreSession(active, total, active.actualDurationSeconds, 'paused');
+      } else if (active.status === 'in_progress') {
+        // Running on server
+        const startTime = new Date(active.startedAt).getTime();
+        const secondsElapsed = Math.floor((Date.now() - startTime) / 1000);
+        
+        if (secondsElapsed >= total) {
+          // Orphan session or expired -> Force complete
+          restoreSession(active, total, total, 'done');
+        } else {
+          // Still running
+          restoreSession(active, total, secondsElapsed, 'running');
+          startTicker(total, startTime, 0);
         }
-        restoreSession({ sessionId, categoryId, goalText, totalSecs, elapsed, phase: 'running' });
-        startTicker(totalSecs, elapsed, wallClockStart, 0, sessionId, categoryId, goalText);
-      } else if (phase === 'paused') {
-        restoreSession({ sessionId, categoryId, goalText, totalSecs, elapsed: elapsedAtPause, phase: 'paused' });
-      } else if (phase === 'done') {
-        restoreSession({ sessionId, categoryId, goalText, totalSecs, elapsed: totalSecs, phase: 'done' });
       }
     }
     init();
+    return () => clearInterval(intervalRef.current);
   }, []);
 
-  function restoreSession({ sessionId, categoryId, goalText, totalSecs, elapsed, phase }) {
-    setSessionId(sessionId);
-    setSelectedCat(categoryId);
-    setGoalText(goalText);
-    setTotalSecs(totalSecs);
-    setElapsed(elapsed);
-    baseElapsed.current = elapsed;
-    setPhase(phase);
+  function restoreSession(active, total, elapsedSeconds, newPhase) {
+    setSessionId(active.id);
+    setSelectedCat(active.categoryId);
+    setGoalText(active.goal?.text || '');
+    setTotalSecs(total);
+    setElapsed(elapsedSeconds);
+    baseElapsed.current = elapsedSeconds;
+    setPhase(newPhase);
   }
 
   // ── Ticker ─────────────────────────────────────────────────────────────────
-  function startTicker(total, currentElapsed, wallStart, base, tickSessionId, tickCatId, tickGoalText) {
+  function startTicker(total, wallStart, base) {
     wallStartRef.current = wallStart;
     baseElapsed.current  = base;
     clearInterval(intervalRef.current);
@@ -95,15 +94,6 @@ export default function TimerPage() {
         clearInterval(intervalRef.current);
         setElapsed(total);
         setPhase('done');
-        saveActiveTimer({
-          sessionId: tickSessionId,
-          categoryId: tickCatId,
-          goalText: tickGoalText,
-          totalSecs: total,
-          wallClockStart: null,
-          phase: 'done',
-          elapsedAtPause: total,
-        });
       }
     }, 500);
   }
@@ -114,80 +104,53 @@ export default function TimerPage() {
     const mins = useCustom ? parseInt(customDur, 10) : duration;
     if (!selectedCat || !goalText.trim() || !mins || mins < 1) return;
 
-    const secs      = mins * 60;
+    const secs = mins * 60;
     const wallStart = Date.now();
-    
-    // 💎 DETERMINISTIC OPTIMISTIC UI: Give the session a permanent UUID instantly
     const permanentSessionId = crypto.randomUUID();
     
+    // Optimistic UI
     setSessionId(permanentSessionId);
     setTotalSecs(secs);
     setElapsed(0);
     setPhase('running');
-    startTicker(secs, 0, wallStart, 0, permanentSessionId, selectedCat, goalText.trim());
+    startTicker(secs, wallStart, 0);
     
-    // Persist optimistic state locally using the real ID
-    saveActiveTimer({
-      sessionId:     permanentSessionId,
-      categoryId:    selectedCat,
-      goalText:      goalText.trim(),
-      totalSecs:     secs,
-      wallClockStart: wallStart,
-      phase:         'running',
-      elapsedAtPause: 0,
-    });
-
     setIsStarting(true);
     try {
       const session = await createSession({ 
-        id: permanentSessionId, // Send the exact ID to the server
+        id: permanentSessionId,
         categoryId: selectedCat, 
         goalText: goalText.trim(), 
         durationMinutes: mins 
       });
-
-      if (session?.error) {
-        throw new Error(session.error);
-      }
-
+      if (session?.error) throw new Error(session.error);
     } catch (err) {
-      // 🛑 ROLLBACK: Stop the timer if server rejects
       resetAll();
-      clearActiveTimer();
       alert(err.message || 'Failed to start session on server');
     } finally {
       setIsStarting(false);
     }
   }
 
-  function handlePause() {
+  async function handlePause() {
     clearInterval(intervalRef.current);
     setPhase('paused');
-    // Update persisted state to paused so restore shows paused correctly
-    saveActiveTimer({
-      sessionId,
-      categoryId:    selectedCat,
-      goalText,
-      totalSecs,
-      wallClockStart: null,
-      phase:         'paused',
-      elapsedAtPause: elapsed,
-    });
+    try {
+      await pauseSession(sessionId, elapsed);
+    } catch (err) {
+      alert("Failed to pause on server");
+    }
   }
 
-  function handleResume() {
+  async function handleResume() {
     const wallStart = Date.now();
     setPhase('running');
-    saveActiveTimer({
-      sessionId,
-      categoryId:    selectedCat,
-      goalText,
-      totalSecs,
-      wallClockStart: wallStart,
-      phase:         'running',
-      elapsedAtPause: elapsed,
-    });
-    startTicker(totalSecs, elapsed, wallStart, elapsed, sessionId, selectedCat, goalText);
+    startTicker(totalSecs, wallStart, elapsed);
+    try {
+      await resumeSession(sessionId);
+    } catch (err) {
+      alert("Failed to resume on server");
+    }
   }
 
   async function handleAbandon() {
@@ -195,7 +158,6 @@ export default function TimerPage() {
       if (!sessionId) return;
       clearInterval(intervalRef.current);
       await abandonSession(sessionId, elapsed);
-      clearActiveTimer();
       resetAll();
     } catch (err) {
       alert(err.message || 'Failed to abandon session.');
@@ -210,10 +172,7 @@ export default function TimerPage() {
         goalAchieved,
         note: note.trim(),
       });
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-      clearActiveTimer();
+      if (result?.error) throw new Error(result.error);
       resetAll();
       router.push('/');
     } catch (err) {

@@ -190,46 +190,44 @@ export async function getAnalyticsData(range = 'week') {
   weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0, 0, 0, 0);
 
-  // SEQUENTIAL QUERIES: Prevent Vercel Serverless Connection Exhaustion
-  // We execute these one by one to ensure we only use 1 connection from the Supabase pool.
-  const sessions = await prisma.focusSession.findMany({ 
-    where: { userId, status: 'completed', endedAt: { gte: startDate, lte: now } },
-    select: {
-      id: true,
-      categoryId: true,
-      actualDurationSeconds: true,
-      endedAt: true,
-      category: {
-        select: { id: true, name: true, color: true, icon: true }
+  // PARALLEL QUERIES: Executed simultaneously for maximum performance
+  // (Safe to do because we use PgBouncer transaction pooling in .env)
+  const [sessions, categories, totalAgg, todayAgg, weekAgg] = await Promise.all([
+    prisma.focusSession.findMany({ 
+      where: { userId, status: 'completed', endedAt: { gte: startDate, lte: now } },
+      select: {
+        id: true,
+        categoryId: true,
+        actualDurationSeconds: true,
+        endedAt: true,
+        category: {
+          select: { id: true, name: true, color: true, icon: true }
+        },
+        goal: { 
+          select: { text: true, achieved: true } 
+        }
       },
-      goal: { 
-        select: { text: true, achieved: true } 
-      }
-    },
-    orderBy: { endedAt: 'desc' }
-  });
-
-  const categories = await prisma.category.findMany({ 
-    where: { userId },
-    select: { id: true, name: true, color: true, icon: true }
-  });
-
-  const totalAgg = await prisma.focusSession.aggregate({
-    _sum: { actualDurationSeconds: true },
-    _count: { id: true },
-    where: { userId, status: 'completed' }
-  });
-
-  const todayAgg = await prisma.focusSession.aggregate({
-    _sum: { actualDurationSeconds: true },
-    _count: { id: true },
-    where: { userId, status: 'completed', endedAt: { gte: todayStart } }
-  });
-
-  const weekAgg = await prisma.focusSession.aggregate({
-    _sum: { actualDurationSeconds: true },
-    where: { userId, status: 'completed', endedAt: { gte: weekStart } }
-  });
+      orderBy: { endedAt: 'desc' }
+    }),
+    prisma.category.findMany({ 
+      where: { userId },
+      select: { id: true, name: true, color: true, icon: true }
+    }),
+    prisma.focusSession.aggregate({
+      _sum: { actualDurationSeconds: true },
+      _count: { id: true },
+      where: { userId, status: 'completed' }
+    }),
+    prisma.focusSession.aggregate({
+      _sum: { actualDurationSeconds: true },
+      _count: { id: true },
+      where: { userId, status: 'completed', endedAt: { gte: todayStart } }
+    }),
+    prisma.focusSession.aggregate({
+      _sum: { actualDurationSeconds: true },
+      where: { userId, status: 'completed', endedAt: { gte: weekStart } }
+    })
+  ]);
   
   const stats = {
     totalHours: ((totalAgg._sum.actualDurationSeconds || 0) / 3600).toFixed(1),
@@ -240,4 +238,50 @@ export async function getAnalyticsData(range = 'week') {
   };
 
   return { sessions, stats, categories };
+}
+
+// ─── Timer Sync (Server-Driven) ───────────────────────────────────────────
+export async function getActiveSession() {
+  const userId = await getUserId();
+  return prisma.focusSession.findFirst({
+    where: { 
+      userId, 
+      status: { in: ['in_progress', 'paused'] } 
+    },
+    include: {
+      category: true,
+      goal: true
+    }
+  });
+}
+
+export async function pauseSession(id, elapsedSeconds) {
+  const userId = await getUserId();
+  const session = await prisma.focusSession.update({
+    where: { id, userId },
+    data: {
+      status: 'paused',
+      actualDurationSeconds: elapsedSeconds
+    }
+  });
+  return session;
+}
+
+export async function resumeSession(id) {
+  const userId = await getUserId();
+  
+  const existing = await prisma.focusSession.findUnique({ where: { id, userId } });
+  if (!existing || existing.status !== 'paused') return existing;
+
+  // Slide startedAt forward by the exact paused duration
+  const newStartedAt = new Date(Date.now() - (existing.actualDurationSeconds * 1000));
+
+  const session = await prisma.focusSession.update({
+    where: { id, userId },
+    data: {
+      status: 'in_progress',
+      startedAt: newStartedAt
+    }
+  });
+  return session;
 }
