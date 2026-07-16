@@ -190,19 +190,16 @@ export async function getAnalyticsData(range = 'week') {
   weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0, 0, 0, 0);
 
-  // PARALLEL QUERIES: Executed simultaneously for maximum performance
-  // (Safe to do because we use PgBouncer transaction pooling in .env)
-  const [sessions, categories, totalAgg, todayAgg, weekAgg] = await Promise.all([
-    prisma.focusSession.findMany({ 
-      where: { userId, status: 'completed', endedAt: { gte: startDate, lte: now } },
+  // 1. Fetch categories
+  // 2. Fetch all completed sessions for this user
+  const [allCompletedSessions, categories] = await Promise.all([
+    prisma.focusSession.findMany({
+      where: { userId, status: 'completed' },
       select: {
         id: true,
         categoryId: true,
         actualDurationSeconds: true,
         endedAt: true,
-        category: {
-          select: { id: true, name: true, color: true, icon: true }
-        },
         goal: { 
           select: { text: true, achieved: true } 
         }
@@ -212,29 +209,54 @@ export async function getAnalyticsData(range = 'week') {
     prisma.category.findMany({ 
       where: { userId },
       select: { id: true, name: true, color: true, icon: true }
-    }),
-    prisma.focusSession.aggregate({
-      _sum: { actualDurationSeconds: true },
-      _count: { id: true },
-      where: { userId, status: 'completed' }
-    }),
-    prisma.focusSession.aggregate({
-      _sum: { actualDurationSeconds: true },
-      _count: { id: true },
-      where: { userId, status: 'completed', endedAt: { gte: todayStart } }
-    }),
-    prisma.focusSession.aggregate({
-      _sum: { actualDurationSeconds: true },
-      where: { userId, status: 'completed', endedAt: { gte: weekStart } }
     })
   ]);
+
+  // Compute sessions in selected range
+  const sessions = allCompletedSessions
+    .filter(s => s.endedAt && s.endedAt >= startDate && s.endedAt <= now)
+    .map(s => {
+      // Map category object locally to avoid duplicate DB joins
+      const cat = categories.find(c => c.id === s.categoryId);
+      return {
+        ...s,
+        category: cat ? { id: cat.id, name: cat.name, color: cat.color, icon: cat.icon } : null
+      };
+    });
+
+  // Compute aggregates in memory
+  let totalDurationSec = 0;
+  let totalSessionsCount = 0;
+  let todayDurationSec = 0;
+  let todaySessionsCount = 0;
+  let weekDurationSec = 0;
+
+  for (const s of allCompletedSessions) {
+    const duration = s.actualDurationSeconds || 0;
+    const endedAtMs = s.endedAt ? new Date(s.endedAt).getTime() : 0;
+
+    // Total stats
+    totalDurationSec += duration;
+    totalSessionsCount += 1;
+
+    // Today stats
+    if (endedAtMs >= todayStart.getTime()) {
+      todayDurationSec += duration;
+      todaySessionsCount += 1;
+    }
+
+    // Week stats
+    if (endedAtMs >= weekStart.getTime()) {
+      weekDurationSec += duration;
+    }
+  }
   
   const stats = {
-    totalHours: ((totalAgg._sum.actualDurationSeconds || 0) / 3600).toFixed(1),
-    todayMinutes: Math.floor((todayAgg._sum.actualDurationSeconds || 0) / 60),
-    weekHours: ((weekAgg._sum.actualDurationSeconds || 0) / 3600).toFixed(1),
-    totalSessions: totalAgg._count.id || 0,
-    todaySessions: todayAgg._count.id || 0,
+    totalHours: (totalDurationSec / 3600).toFixed(1),
+    todayMinutes: Math.floor(todayDurationSec / 60),
+    weekHours: (weekDurationSec / 3600).toFixed(1),
+    totalSessions: totalSessionsCount,
+    todaySessions: todaySessionsCount,
   };
 
   return { sessions, stats, categories };
