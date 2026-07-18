@@ -307,3 +307,20 @@ export async function resumeSession(id) {
   });
   return session;
 }
+
+// ─── User Preferences ──────────────────────────────────────────────────────
+export async function getPreferences() {
+  const userId = await getUserId();
+  const pref = await prisma.userPreference.findUnique({ where: { userId } });
+  return pref ?? { startSound: 'none', ambientSound: 'none', endSound: 'chime' };
+}
+
+export async function savePreferences({ startSound, ambientSound, endSound }) {
+  const userId = await getUserId();
+  await prisma.userPreference.upsert({
+    where:  { userId },
+    update: { startSound, ambientSound, endSound },
+    create: { userId, startSound, ambientSound, endSound },
+  });
+  revalidatePath('/settings');
+}
