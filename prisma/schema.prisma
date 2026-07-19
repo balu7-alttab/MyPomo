@@ -49,6 +49,7 @@ model User {
   
   categories    Category[]
   focusSessions FocusSession[]
+  preference    UserPreference?
 }
 
 model VerificationToken {
@@ -106,4 +107,14 @@ model Note {
   focusSession   FocusSession @relation(fields: [focusSessionId], references: [id], onDelete: Cascade)
   text           String
   createdAt      DateTime     @default(now())
+}
+
+model UserPreference {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startSound   String   @default("none")
+  ambientSound String   @default("none")
+  endSound     String   @default("chime")
+  updatedAt    DateTime @updatedAt
 }

@@ -10,8 +10,10 @@ import {
   abandonSession,
   getActiveSession,
   pauseSession,
-  resumeSession
+  resumeSession,
+  getPreferences
 } from '@/app/actions';
+import { NOTIFICATION_SOUNDS, AMBIENT_SOUNDS, getSoundFile } from '@/app/sounds';
 
 export default function TimerPage() {
   const router = useRouter();
@@ -39,11 +41,33 @@ export default function TimerPage() {
   const [goalAchieved, setGoalAchieved] = useState(null);
   const [note, setNote]                 = useState('');
 
+  // Audio refs
+  const [prefs, setPrefs] = useState(null);
+  const startAudioRef   = useRef(null);
+  const ambientAudioRef = useRef(null);
+  const endAudioRef     = useRef(null);
+
   // ── 100% Server-Driven Initialization ─────────────────────────────────────
   useEffect(() => {
     async function init() {
       const cats = await getCategories();
       setCategories(cats);
+
+      const userPrefs = await getPreferences();
+      setPrefs(userPrefs);
+      
+      const startFile = getSoundFile(userPrefs.startSound, NOTIFICATION_SOUNDS);
+      if (startFile) startAudioRef.current = new Audio(startFile);
+      
+      const ambientFile = getSoundFile(userPrefs.ambientSound, AMBIENT_SOUNDS);
+      if (ambientFile) {
+        const a = new Audio(ambientFile);
+        a.loop = true;
+        ambientAudioRef.current = a;
+      }
+      
+      const endFile = getSoundFile(userPrefs.endSound, NOTIFICATION_SOUNDS);
+      if (endFile) endAudioRef.current = new Audio(endFile);
 
       const active = await getActiveSession();
       if (!active) return;
@@ -65,11 +89,15 @@ export default function TimerPage() {
           // Still running
           restoreSession(active, total, secondsElapsed, 'running');
           startTicker(total, startTime, 0);
+          ambientAudioRef.current?.play().catch(e => console.error("Autoplay prevented:", e));
         }
       }
     }
     init();
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      clearInterval(intervalRef.current);
+      ambientAudioRef.current?.pause();
+    };
   }, []);
 
   function restoreSession(active, total, elapsedSeconds, newPhase) {
@@ -94,6 +122,8 @@ export default function TimerPage() {
         clearInterval(intervalRef.current);
         setElapsed(total);
         setPhase('done');
+        ambientAudioRef.current?.pause();
+        endAudioRef.current?.play().catch(console.error);
       }
     }, 500);
   }
@@ -115,6 +145,9 @@ export default function TimerPage() {
     setPhase('running');
     startTicker(secs, wallStart, 0);
     
+    startAudioRef.current?.play().catch(console.error);
+    ambientAudioRef.current?.play().catch(console.error);
+    
     setIsStarting(true);
     try {
       const session = await createSession({ 
@@ -135,6 +168,7 @@ export default function TimerPage() {
   async function handlePause() {
     clearInterval(intervalRef.current);
     setPhase('paused');
+    ambientAudioRef.current?.pause();
     try {
       await pauseSession(sessionId, elapsed);
     } catch (err) {
@@ -146,6 +180,7 @@ export default function TimerPage() {
     const wallStart = Date.now();
     setPhase('running');
     startTicker(totalSecs, wallStart, elapsed);
+    ambientAudioRef.current?.play().catch(console.error);
     try {
       await resumeSession(sessionId);
     } catch (err) {
@@ -157,6 +192,8 @@ export default function TimerPage() {
     try {
       if (!sessionId) return;
       clearInterval(intervalRef.current);
+      ambientAudioRef.current?.pause();
+      if (ambientAudioRef.current) ambientAudioRef.current.currentTime = 0;
       await abandonSession(sessionId, elapsed);
       resetAll();
     } catch (err) {
@@ -182,6 +219,8 @@ export default function TimerPage() {
 
   function resetAll() {
     clearInterval(intervalRef.current);
+    ambientAudioRef.current?.pause();
+    if (ambientAudioRef.current) ambientAudioRef.current.currentTime = 0;
     setPhase('idle');
     setSessionId(null);
     setElapsed(0);
