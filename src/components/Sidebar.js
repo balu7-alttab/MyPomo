@@ -124,7 +124,7 @@ export default function Sidebar() {
 
       {/* Mobile Bottom Tab Bar */}
       <nav className="mobile-tab-bar" role="navigation" aria-label="Mobile navigation">
-        {[NAV[0], NAV[1], NAV[2], NAV[3], NAV[5]].map(item => (
+        {NAV.map(item => (
           <Link
             key={item.href}
             href={item.href}

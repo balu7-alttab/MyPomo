@@ -139,10 +139,11 @@ export default function SessionManager({ sessions }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="card empty-state" style={{ minHeight: 300 }}>
+        <div className="card empty-state" style={{ minHeight: 300, justifyContent: 'center' }}>
           <div className="empty-state-icon">🍅</div>
-          <h3>No sessions found</h3>
-          <p>Start your first focus session to see it here.</p>
+          <h3 style={{ marginBottom: '0.25rem' }}>No sessions found</h3>
+          <p style={{ marginBottom: '1.25rem' }}>Start your first focus session to see it here.</p>
+          <Link href="/timer" className="btn btn-primary">▶ Start Focus Session</Link>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>

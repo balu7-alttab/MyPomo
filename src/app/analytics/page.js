@@ -129,7 +129,8 @@ export default async function AnalyticsPage({ searchParams }) {
           {breakdown.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon">🍩</div>
-              <p>No sessions in this range.</p>
+              <p style={{ marginBottom: '1rem' }}>No sessions in this range.</p>
+              <Link href="/timer" className="btn btn-primary btn-sm">▶ Start Focus</Link>
             </div>
           ) : (
             <>
@@ -194,7 +195,8 @@ export default async function AnalyticsPage({ searchParams }) {
           {dailyData.every(d => d.mins === 0) ? (
             <div className="empty-state">
               <div className="empty-state-icon">📈</div>
-              <p>Complete sessions to see your daily trend.</p>
+              <p style={{ marginBottom: '1rem' }}>Complete sessions to see your daily trend.</p>
+              <Link href="/timer" className="btn btn-secondary btn-sm">▶ Start Focus</Link>
             </div>
           ) : (
             <div style={{ height: 200, display: 'flex', alignItems: 'flex-end', gap: '0.5rem', paddingBottom: '2rem', position: 'relative' }}>

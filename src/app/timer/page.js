@@ -335,15 +335,15 @@ export default function TimerPage() {
           </p>
 
           {/* Circular timer */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 280, aspectRatio: '1/1' }}>
             {phase === 'running' && (
               <div style={{
-                position: 'absolute', width: 264, height: 264, borderRadius: '50%',
+                position: 'absolute', width: '94%', height: '94%', borderRadius: '50%',
                 background: `${activeCat?.color || 'var(--accent-primary)'}22`,
                 animation: 'pulse-ring 2s ease-out infinite',
               }} />
             )}
-            <svg width="280" height="280" style={{ transform: 'rotate(-90deg)' }}>
+            <svg width="100%" height="auto" viewBox="0 0 280 280" style={{ transform: 'rotate(-90deg)', maxWidth: 280 }}>
               <circle cx="140" cy="140" r={RADIUS} fill="none" stroke="var(--bg-elevated)" strokeWidth="10" />
               <circle cx="140" cy="140" r={RADIUS} fill="none"
                 stroke={activeCat?.color || 'var(--accent-primary)'}
