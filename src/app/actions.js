@@ -30,7 +30,21 @@ const getUserId = cache(async () => {
 // ─── Categories ─────────────────────────────────────────────────────────────
 export async function getCategories() {
   const userId = await getUserId();
-  return prisma.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+  const categories = await prisma.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+  
+  if (categories.length === 0) {
+    // Seed default categories as fallback
+    await prisma.category.createMany({
+      data: [
+        { userId, name: 'Work', color: '#3b82f6', icon: '💼' },
+        { userId, name: 'Study', color: '#8b5cf6', icon: '📚' },
+        { userId, name: 'Personal', color: '#10b981', icon: '🧘' }
+      ]
+    });
+    return prisma.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+  }
+  
+  return categories;
 }
 
 export async function saveCategory(catForm) {
@@ -206,10 +220,7 @@ export async function getAnalyticsData(range = 'week') {
       },
       orderBy: { endedAt: 'desc' }
     }),
-    prisma.category.findMany({ 
-      where: { userId },
-      select: { id: true, name: true, color: true, icon: true }
-    })
+    getCategories()
   ]);
 
   // Compute sessions in selected range

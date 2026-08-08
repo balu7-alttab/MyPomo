@@ -610,7 +610,6 @@ select.input {
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
   z-index: 100;
   justify-content: space-around;
-  display: flex;
 }
 
 .tab-item {
